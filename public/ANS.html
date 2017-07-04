@@ -21,6 +21,7 @@
 <!-- Required -->
 <script src="assets/lib/lib.js"></script>
 <script src="assets/utils.js"></script>
+<script src="rANS.js"></script>
 <script>
   var renderQueue = [];
   function renderMath(elem) {
@@ -132,25 +133,31 @@
   <h1>What is ANS?</h1>
   <h2>Understanding the new entropy coder: Asymmetric Numeral Systems</h2>
   <dt-byline></dt-byline>
-  <p>Recently while attending a talk at the Stanford Compression Forum, I heard about the Asymmetric Numeral Systems entropy coder (ANS). Considering Arithmetic coding and Huffman coding have essentially resolved the problem of entropy coding, I was curious to understand what exactly did this new kid on the block did! However, I found the original paper pretty difficult to follow. Thanks to some amazing and detailed blog posts , I was able to make some sense out of the paper! Today, just a few years after the original paper came out, ANS has already been incorporated into numerous compressors.  So here we go: the ANS Coder is not a single compressor but a class of entropy coders for a given distribution. The most important thing they achieve is achieving very accurate compression (similar to Arithmetic coding), but at very high speeds. This is also seen from Table 1, which lists the improvements due to the usage of the ANS family of entropy coders (like Pied Piper, ANS significantly improves upon the Weissman score :) ). But, why are existing entropy coders slow? </p>
+  <p>Recently while attending a talk at the Stanford Compression Forum, I heard about a new class of entropy coders called the Asymmetric Numeral Systems coders (ANS). Considering Arithmetic coding and Huffman coding have essentially resolved the problem of entropy coding, it is surprising that there is a new development in the field of entropy coding. Today, just a few years after the original paper came out, ANS has already been incorporated into numerous compressors, including Zstandard (facebook), LZFSE (Apple), CRAM (Genomic SAM file compression) etc. I was curious to understand what exactly did this new kid on the block did, but found the original paper pretty difficult to follow. Thanks to some amazing and detailed blog posts, I was able to make some sense out of the paper! The ANS Coder is not a single compressor but a class of entropy coders for a given distribution. The most important thing they achieve is achieving very accurate compression (similar to Arithmetic coding) ,but at very high compression and decompression speeds (like Pied Piper, ANS significantly improves upon the Weissman score :) ). </p>
+
+  <p> In this series of posts, we will try to improve our understanding of the ANS family of coders. But before we do that, lets revise the two most important entropy coders we have: Huffman and Arithmetic Coders. </p>
 
   <h2> Huffman and Arithmetic Coders </h2>
   <p>
-  Huffman coding (and for that matter any prefix codes) are the fastest entropy coders, as all they do is table-lookup for encoding and parse a binary tree for decoding [perform experiments and get a number, or lookup into the table]. However, even the most optimal prefix encoder: Huffman coder can be significantly suboptimal. Arithmetic coding is optimal in terms of its compression, but has compression/decompression speeds close to 100 MB/s. These speeds although amazing, are still significantly slower than that of Huffman coding. Also, However, they are slower than the disk access speeds, which implies there is room for resolving this bottleneck (there always is!). If you brush up your memory (or look here: <dt-cite key="gregor2015draw"></dt-cite>) , you would remember that Arithmetic coding subdivides the <i>range</i> which it maintains as a state and thus uses the <i>division</i> operation at every step (both in the encoder and decoder), which is very slow as compared to addition, bit-shifts. The ANS Encoder achieves the optimal compression rate without employing division, some variants of ANS are infact similar to Huffman encoding, as they are "table-lookup" encoders.  
+  Huffman coding (and for that matter any prefix-free codes) are the fastest entropy coders, as all they do is table-lookup for encoding, where there is a unique prefix-free code for every input alphabet. The prefix-free nature of the codes allows for efficient decoding. One can also imagine huffman coding being a Finite State Entropy coder (FSE), with a single state. For every input alphabet, we output the corresponding prefix-free code (from the lookup-table) and transition back to the same state. We also know that even the best prefix encoder: Huffman coder can be significantly suboptimal in terms of compression, with a gap with the entropy as high as <dt-math> 1 bit/symbol </dt-math>. </p>
+
+  <p> On the other extreme we have the family of Arithmetic coders. Arithmetic coding can be thought of as an encoder which implicitly represents the entire input as a single state from a huge Finite-State automata (whose size is asymtotically exponential in the length of the input). Arithmetic coding is optimal in terms of its compression, but has slower compression/decompression speeds. If you brush up your memory (or look here: <dt-cite key="gregor2015draw"></dt-cite>) , you would remember that Arithmetic coding subdivides the <i>range</i> which it maintains as a state and thus uses the <i>division</i> operation at every step (both during compression and decompression), which is the main reason for it being slow. </p>
+
+  <p> The ANS family of coders forms the bridge between these two extremes of entropy coders, where we can design a k-state FSE coder (for a wide range of <dt-math> k </dt-math> values), which results in better compression optimality than Huffman coding with a slight decrease in the speed. This ability of graceful tradeoff between the compression vs speed is crucial to what makes the ANS family so useful in practice.  We will first look at one member of the ANS family of coders: <b>rANS</b>, which is an acronym for range-ANS due to its similarities to the arithmetic encoder.   
   </p>
 
  <h2> rANS </h2>
  <p>
- We will first look at one member of the ANS family of coders: <b>rANS</b>, which is an acronym for range-ANS due to its similarities to the arithmetic encoder. Before we describe rANS, some important pointers: 
+ Before we describe rANS, some important pointers: 
  <ol>
   <li> Let <dt-math>S = (s_1,s_2,s_3,\ldots, s_n) </dt-math> be the input string of symbols from the alphabet set <dt-math> \mathcal{A} = \{a_1,a_2,\ldots,a_k \}</dt-math> of size <dt-math>k</dt-math>
   <li> We assume the data comes from a distribution characterized by the frequency counts <dt-math> \mathcal{F} = \{ F_{a_1}, F_{a_2},\ldots, F_{a_k} \} </dt-math>, which are integers proportional to the probability mass distribution <dt-math>(p_1,p_2,\ldots,p_k)</dt-math> of the symbols.
     <br>
   Let <dt-math> M = \sum_{i=1}^k F_i </dt-math>. Then, <dt-math> p_i = \frac{F_{a_i}}{M} </dt-math>
   <li> We also define the cumulative frequency counts <dt-math> C_{a_i} = \sum_{j=1}^i F_{a_j} </dt-math>, which correspond to the cumulative distribution of the symbols
-  <li> rANS keeps tract of the input using a single integer state. Let <dt-math> X_t </dt-math> represent the integer state of rANS after it has looked at <dt-math> t </dt-math> input symbols. <dt-math> X_0 = 1 </dt-math> is the initial state of rANS. <dt-math> X_t </dt-math> is a function of the previous state <dt-math> X_{t-1} </dt-math> and the current symbol <dt-math> s_t </dt-math>
+  <li> rANS keeps track of the input using a single integer state. Let <dt-math> X_t </dt-math> represent the integer state of rANS after it has looked at <dt-math> t </dt-math> input symbols. <dt-math> X_0 = 1 </dt-math> is the initial state of rANS. <dt-math> X_t </dt-math> is a function of the previous state <dt-math> X_{t-1} </dt-math> and the current symbol <dt-math> s_t </dt-math>
     <dt-math block>  X_t = C_{rANS}(X_{t-1},s_t)</dt-math>
-  <li> The state <dt-math> X_n </dt-math> (along with the number of symbols encoded: <dt-math> n </dt-math>) is used to decode the entire input string <dt-math> S </dt-math>
+  <li> The compression output is the state <dt-math> X_n </dt-math> represented using <dt-math> ceil(\log_2 X_n) </dt-math> bits. <dt-math> X_n </dt-math> (along with the number of symbols encoded: <dt-math> n </dt-math>) is used to decode the entire input string <dt-math> S </dt-math>
     <dt-math block>  s_t, X_{t-1} = D_{rANS}(X_{t})</dt-math>
  </ol>
  </p>
@@ -168,9 +175,54 @@
       X_t = floor \left( \frac{X_{t-1}}{F_{s_t}} \right) * M + C_{s_t} + mod(X_{t-1}, F_{s_t}) 
    </dt-math>
     
-   Thats all! This is the encoding step for the rANS. We also present a python function script (which is more of a pseudo-code) to play around with. 
+   Thats all! This is the encoding step for the rANS. Lets also state the decoder for completeness. 
+   
+   Let <dt-math> C\_inv(y) </dt-math> be the inverse function of the cumulative frequency, where: <dt-math> C\_inv(y) = a_i </dt-math>, if <dt-math> C_{a_i} \leq y  < C_{a_{i+1}} </dt-math>. Then, the decoder, <dt-math>D_{rANS}(X_{t})</dt-math> is defined as follows:
 
-   <dt-code block language="python">
+   <dt-math block> 
+      \begin{aligned}
+      slot &= mod(X_t,M) \\
+      s_t  &= C\_inv(slot) \\
+      X_{t-1} &= floor \left( X_t/M \right) * F_{s_t} + slot - C_{s_t} 
+      \end{aligned}
+   </dt-math>
+   
+   </p>
+   <p>
+   One can understand rANS encoding as a 2-step process:
+   <ol>
+     <li> In the first step, we choose a <dt-math> M </dt-math> sized block. For a state <dt-math> X_{t-1} </dt-math>, we choose the block with  <dt-math> blockId = floor \left( \frac{X_{t-1}}{F_{s_t}} \right) </dt-math>. 
+     <li> Once the <dt-math> blockId </dt-math> is fixed, we choose a <dt-math> slot </dt-math>, out of the <dt-math> M </dt-math> allowed integers from the block. For the next symbol being <dt-math> s_t </dt-math>, the <dt-math> slot </dt-math> can be chosen in the range <dt-math> [C_{s_t},C_{s_{t} + 1}-1] </dt-math>.
+     <li> The next state <dt-math> X_t </dt-math> then is composed of as: <dt-math> X_t = blockId*M + slot </dt-math> 
+     <li> Having distinct ranges for every symbol makes it possible to decode <dt-math> s_t </dt-math>, by only looking at: 
+    <dt-math> slot = mod(X_t,M) </dt-math> during the decoding, using the <dt-math> C\_inv </dt-math> function.
+     <li> During the decoding, we can also retrieve the  <dt-math> blockId </dt-math> from the state <dt-math> X_t </dt-math> as: <dt-math> floor \left( X_t/M \right) </dt-math>. Now the only missing piece of information required to retrieve <dt-math> X_{t-1} </dt-math> is <dt-math> mod(X_{t-1}, F_{s_t}) </dt-math>. We can very amazingly also accomodate this information during the encoding, by choosing the <dt-math> slot </dt-math> ID to be <dt-math> C_{s_t} + mod(X_{t-1}, F_{s_t}) </dt-math>, which lies in the allowed range of <dt-math> [C_{s_t},C_{s_{t} + 1}-1] </dt-math>.
+    </ol>
+   </p>
+   <h4> rANS Encoding Example</h4>
+   <p> The following snippet can be used to try out the rANS encoding to ge an idea </p>
+   <p>
+   Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts" value="3,3,2"> <br>
+   Input Symbol String: <input type="text" id="input_text" value="0,1,0,2,2,0,1,0"> <br>
+   <button onclick="rANS_encoder()">Try it</button> 
+   </p>
+   <p id="demo"></p>
+
+
+   <h4> rANS Decoding </h4>
+   <p> You can input the state and other info from the encoding to verify that the encoding is indeed correct </p>
+   <p>
+   Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts_decoder" value="3,3,2"> <br>
+   State <input type="text" id="state_decoder" value="3017"> <br>
+   Number of Encoded Symbols <input type="text" id="num_decoder" value="8"> <br>
+   <button onclick="rANS_decoder()">Try it</button> 
+   </p>
+   <p id="rANS_decoder"></p>
+  
+  <p>
+  We also present python function scripts (which is more of a pseudo-code) to play around with. 
+
+  <dt-code block language="python">
   # rANS Encoder code. Not optimized in any way
   # Mainly for playing around 
   def rANS_encoder(s_input, symbol_counts):
@@ -186,18 +238,6 @@
     return state, num_symbols
    </dt-code>
 
-   Lets also state the decoder for completeness. 
-   Let <dt-math> C\_inv(y) </dt-math> be the inverse function of the cumulative frequency, where: <dt-math> C\_inv(y) = a_i </dt-math>, if <dt-math> C_{a_i} \leq y  < C_{a_{i+1}} </dt-math>. Then, the decoder, <dt-math>D_{rANS}(X_{t})</dt-math> is defined as follows:
-
-   <dt-math block> 
-      \begin{aligned}
-      slot &= mod(X_t,M) \\
-      s_t  &= C\_inv(slot) \\
-      X_{t-1} &= floor \left( X_t/M \right) * F_{s_t} + slot - C_{s_t} 
-      \end{aligned}
-   </dt-math>
-
-   Also find the code snipped for decoding below:
    <dt-code block language="python">
   #rANS Decoder code. Not optimized in any way
   #Mainly for playing around 
@@ -220,25 +260,19 @@
     return x_decoded
    </dt-code>
 
-  
+  <h4> Optimality of rANS </h4>
+  Now that we have convinced ourselves that rANS indeed is a lossless codec, lets see why rANS achieves the optimal compression ratio. Notice that: 
+  <dt-math block>  
+    \begin{align}
+    \frac{X_t}{X_{t-1}} &\approx p(s_t) &= \frac{M}{F_{s_t}} \\
+    \frac{X_n}{X_{0}} &\approx \prod_{t=1}^n p(s_t) \\
+    \end{align}
+  </dt-math>
+
+
   </p>
 
-   <h4> Example 1</h4>
-   <p> 
-   Lets consider a simple example over 3 alphabets, with frequency counts: <dt-math> \mathcal{F} = \{ 1,1,1\} </dt-math>. How does the encoding of the string <dt-math> S = \{ 0,2,1,1,0,2,2\} </dt-math> look?
-
-   <dt-code block language="python">
-   # The state at every stage of encoding
-   X_0 = 1 
-   X_1 = 1*3 + 0 + 0 = 3 
-   X_2 = 3*3 + 2 + 0 = 11 
-   X_3 = 11*3 + 1 + 0 = 34 
-   ...
-   X_7 = 
-   </dt-code>
-
-   The example is pretty simple, but intuitively it makes things clear. We can represent  
-   </p>
+   
 
 
   <p>We can also cite <dt-cite key="gregor2015draw"></dt-cite> external publications.</p>
