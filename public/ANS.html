@@ -148,22 +148,22 @@
 
  <h2> rANS </h2>
  <p>
- Before we describe rANS, some important pointers: 
+ Before we describe rANS, some notation: 
  <ol>
   <li> Let <dt-math>S = (s_1,s_2,s_3,\ldots, s_n) </dt-math> be the input string of symbols from the alphabet set <dt-math> \mathcal{A} = \{a_1,a_2,\ldots,a_k \}</dt-math> of size <dt-math>k</dt-math>
   <li> We assume the data comes from a distribution characterized by the frequency counts <dt-math> \mathcal{F} = \{ F_{a_1}, F_{a_2},\ldots, F_{a_k} \} </dt-math>, which are integers proportional to the probability mass distribution <dt-math>(p_1,p_2,\ldots,p_k)</dt-math> of the symbols.
     <br>
   Let <dt-math> M = \sum_{i=1}^k F_i </dt-math>. Then, <dt-math> p_i = \frac{F_{a_i}}{M} </dt-math>
-  <li> We also define the cumulative frequency counts <dt-math> C_{a_i} = \sum_{j=1}^i F_{a_j} </dt-math>, which correspond to the cumulative distribution of the symbols
-  <li> rANS keeps track of the input using a single integer state. Let <dt-math> X_t </dt-math> represent the integer state of rANS after it has looked at <dt-math> t </dt-math> input symbols. <dt-math> X_0 = 1 </dt-math> is the initial state of rANS. <dt-math> X_t </dt-math> is a function of the previous state <dt-math> X_{t-1} </dt-math> and the current symbol <dt-math> s_t </dt-math>
+  <li> We also define the cumulative frequency counts <dt-math> C_{a_i} = \sum_{j=1}^{i-1} F_{a_j} </dt-math>, which correspond to the cumulative distribution of the symbols
+  </ol>
+  </p>
+  <p> <b>Example:</b> Let the alphabet be <dt-math> \mathcal{A} = \{ A,B,C\} </dt-math>. Then, we can consider input generated using frequency counts <dt-math> F = \{ 3, 3, 2\} </dt-math>, which corresponds to probabilities <dt-math> \{ \frac{3}{8}, \frac{3}{8}, \frac{2}{8} \} </dt-math>. 
+  <br> The cumulative frequency counts in this case corresponds to <dt-math> C = \{ 0, 3, 6 \} </dt-math>
+  </p>
+  <!-- <li> rANS keeps track of the input using a single integer state. Let <dt-math> X_t </dt-math> represent the integer state of rANS after it has looked at <dt-math> t </dt-math> input symbols. <dt-math> X_0 = 1 </dt-math> is the initial state of rANS. <dt-math> X_t </dt-math> is a function of the previous state <dt-math> X_{t-1} </dt-math> and the current symbol <dt-math> s_t </dt-math>
     <dt-math block>  X_t = C_{rANS}(X_{t-1},s_t)</dt-math>
   <li> The compression output is the state <dt-math> X_n </dt-math> represented using <dt-math> ceil(\log_2 X_n) </dt-math> bits. <dt-math> X_n </dt-math> (along with the number of symbols encoded: <dt-math> n </dt-math>) is used to decode the entire input string <dt-math> S </dt-math>
-    <dt-math block>  s_t, X_{t-1} = D_{rANS}(X_{t})</dt-math>
- </ol>
- </p>
-  <p>
-   To clear off some confusion, consider the following example: For the binary alphabet <dt-math> \mathcal{A} = \{ A,B\} </dt-math>, we can consider input generated using frequency counts <dt-math> F = \{ 3, 1\} </dt-math>, which corresponds to probabilities <dt-math> \{ \frac{3}{4}, \frac{1}{4} \} </dt-math>. Note that rANS keeps track of a single integer state, unlike the vanilla Arithmetic encoder, which needs to keep track of two floating-point states during the computation. 
-  </p>
+    <dt-math block>  s_t, X_{t-1} = D_{rANS}(X_{t})</dt-math> -->
 
    <h3> rANS Encoding & Decoding </h3>
    <p>
@@ -261,7 +261,9 @@
    </dt-code>
 
   <h4> Optimality of rANS </h4>
+  <p>
   Now that we have convinced ourselves that rANS indeed is a lossless codec, lets see why rANS achieves the optimal compression ratio. Notice that: 
+  
   <dt-math block>  
     \begin{align}
     \frac{X_t}{X_{t-1}} &\approx p(s_t) &= \frac{M}{F_{s_t}} \\
