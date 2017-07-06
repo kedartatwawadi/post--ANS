@@ -27,8 +27,8 @@ function rANS_encoder() {
         sum_counts += symbol_counts[i];
     }
     
-    var state = 1
-    var output_string = "<table>" + "<tr> <th>Input </th> <th> State </th></tr>"
+    var state = 0
+    var output_string = "<table width=\"50%\">" + "<tr> <th>Input </th> <th> State </th></tr>"
     for (j=0; j < s_input.length; j++){
         s = s_input[j]
         Fs = symbol_counts[s]
@@ -37,12 +37,13 @@ function rANS_encoder() {
         output_string += "<tr> <th>" + s + "</th><th>" + state + "</th></tr>"
     }
     output_string += "</table>"
-    output_string += "<br> Final State: " + state
-    output_string += "<br> Number of input symbols: " + s_input.length
+    output_string += "<tt> <small>"
+    output_string += "Final State: " + state 
+    output_string += "<br> Number of input symbols: " + s_input.length 
     
     var L_avg = Math.ceil(Math.log(state)/Math.log(2.0))/s_input.length
     output_string += "<br> Average codelength: " + L_avg 
-    output_string += "<br> Entropy: " + entropy(symbol_counts)
+    output_string += "<br> Entropy: " + entropy(symbol_counts) + "<br> </tt> </small>"
     document.getElementById("demo").innerHTML = output_string;    
 }
 
@@ -69,7 +70,7 @@ function rANS_decoder() {
         return (i-1)
     }
 
-    var output_string = "<table>" + "<tr> <th>Output </th> <th> State </th></tr>"
+    var output_string = "<table width=\"50%\">" + "<tr> <th>Output </th> <th> State </th></tr>"
     for (j=0; j < num_symbols; j++){
         slot = state % sum_counts
         s = c_inv(slot)
@@ -80,6 +81,6 @@ function rANS_decoder() {
         state = Math.floor(state/sum_counts)*Fs + slot - Cs
     }
     output_string += "</table>"
-    output_string += "<br> Final State: " + state
+    output_string += "<tt> <small> <br> Final State: " + state + "</tt> </small>"
     document.getElementById("rANS_decoder").innerHTML = output_string;    
 }
