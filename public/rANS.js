@@ -49,6 +49,51 @@ function rANS_encoder() {
 
 
 
+
+
+
+function rANS_decoder() {
+    // Input function
+    var countsVal = document.getElementById("symbol_counts_decoder").value;
+    var num_symbols = Number(document.getElementById("num_decoder").value);
+    var state = Number(document.getElementById("state_decoder").value);
+    var symbol_counts = countsVal.split(',').map(function(countsVal){return Number(countsVal);});
+    
+    // compute cumulative frequencies
+    var cumul_counts = []
+    var sum_counts = 0
+    for (var i=0;i < symbol_counts.length; i++){
+        cumul_counts.push(sum_counts);
+        sum_counts += symbol_counts[i];
+    }
+    
+    function c_inv(y){
+        for (var i=0;i < symbol_counts.length; i++){
+            if (y < cumul_counts[i]) break;        
+        }
+        return (i-1)
+    }
+
+    var output_string = "<table width=\"50%\">" + "<tr> <th>Output </th> <th> State </th></tr>"
+    for (var j=0; j < num_symbols; j++){
+        var slot = state % sum_counts
+        var s = c_inv(slot)
+        var Fs = symbol_counts[s]
+        var Cs = cumul_counts[s]
+        output_string += "<tr> <th>" + s + "</th><th>" + state + "</th></tr>"
+
+        state = Math.floor(state/sum_counts)*Fs + slot - Cs
+    }
+    output_string += "</table>"
+    output_string += "<tt> <small> <br> Final State: " + state + "</tt> </small>"
+    document.getElementById("rANS_decoder").innerHTML = output_string;    
+}
+
+
+/*******************************************************************************
+ STREAMING RANS VARIANTS
+********************************************************************************/
+
 function rANS_streaming_encoder() {
     // Input function
     var countsVal = document.getElementById("symbol_counts_streaming").value;
@@ -95,13 +140,14 @@ function rANS_streaming_encoder() {
 }
 
 
-
-function rANS_decoder() {
+function rANS_streaming_decoder() {
     // Input function
-    var countsVal = document.getElementById("symbol_counts_decoder").value;
-    var num_symbols = Number(document.getElementById("num_decoder").value);
-    var state = Number(document.getElementById("state_decoder").value);
+    var countsVal = document.getElementById("symbol_counts_streaming_decoder").value;
+    var num_symbols = Number(document.getElementById("num_streaming_decoder").value);
+    var state = Number(document.getElementById("state_streaming_decoder").value);
+    var streamVal = document.getElementById("rANS_stream_decoder").value;
     var symbol_counts = countsVal.split(',').map(function(countsVal){return Number(countsVal);});
+    var rANS_stream = streamVal.split('').map(function(arr){return Number(arr);});
     
     // compute cumulative frequencies
     var cumul_counts = []
@@ -125,10 +171,14 @@ function rANS_decoder() {
         var Fs = symbol_counts[s]
         var Cs = cumul_counts[s]
         output_string += "<tr> <th>" + s + "</th><th>" + state + "</th></tr>"
-
         state = Math.floor(state/sum_counts)*Fs + slot - Cs
+
+        while (state < sum_counts){
+            state = state*2 + rANS_stream.pop() 
+        }
+
     }
     output_string += "</table>"
     output_string += "<tt> <small> <br> Final State: " + state + "</tt> </small>"
-    document.getElementById("rANS_decoder").innerHTML = output_string;    
+    document.getElementById("rANS_streaming_decoder_output").innerHTML = output_string;    
 }

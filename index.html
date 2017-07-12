@@ -225,7 +225,7 @@
    <h4> rANS Encoding Example</h4>
    <p>
    Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts" value="3,3,2"> <br>
-   Input Symbol String: <input type="text" id="input_text" value="0,1,0,2,2,0,1,0"> <br>
+   Input Symbol String: <input type="text" id="input_text" value="0,1,0,2,2,0,2,1,2"> <br>
    <button onclick="rANS_encoder()">Try it</button> 
    </p>
    <p id="demo"></p>
@@ -247,8 +247,8 @@
    <h4> rANS Decoding Example </h4>
    <p>
    Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts_decoder" value="3,3,2"> <br>
-   State <input type="text" id="state_decoder" value="2976"> <br>
-   Number of Encoded Symbols <input type="text" id="num_decoder" value="8"> <br>
+   State <input type="text" id="state_decoder" value="17910"> <br>
+   Number of Encoded Symbols <input type="text" id="num_decoder" value="9"> <br>
    <button onclick="rANS_decoder()">Try it</button> 
    </p>
    <p id="rANS_decoder"></p>
@@ -348,12 +348,21 @@
   <h4> Streaming-rANS Encoding Example</h4>
    <p>
    Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts_streaming" value="3,3,2"> <br>
-   Input Symbol String: <input type="text" id="input_text_streaming" value="0,1,0,2,2,0,1,0"> <br>
+   Input Symbol String: <input type="text" id="input_text_streaming" value="0,1,0,2,2,0,2,1,2"> <br>
    <button onclick="rANS_streaming_encoder()">Try it</button> 
    </p>
    <p id="rANS_stream_encoder"></p>
 
- 
+  <h4> Streaming-rANS Decoding Example </h4>
+   <p>
+   Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts_streaming_decoder" value="3,3,2"> <br>
+   Final State <input type="text" id="state_streaming_decoder" value="8"> <br>
+   BitStream <input type="text" id="rANS_stream_decoder" value="0100000111000111"> <br>
+   Number of Encoded Symbols <input type="text" id="num_streaming_decoder" value="9"> <br>
+   <button onclick="rANS_streaming_decoder()">Try it</button> 
+   </p>
+   <p id="rANS_streaming_decoder_output"></p>
+
 </dt-article>
 
 <dt-appendix>
