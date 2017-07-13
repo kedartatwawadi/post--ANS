@@ -339,12 +339,12 @@
   </ol>
   </p>
 
-  <h2> Streaming-rANS </h2>
+  <h2> Streaming-rANS [IN PROGRESS]</h2>
   <p>
-  To apply rANS on a streaming input (or even a moderately large input), we con come up with some very simple modifications: One simple idea is to set a maximum state size of say, <dt-math>H = 2^{64} </dt-math> and encode as many symbols so that the state is not larger than <dt-math>H</dt-math>. In this case, we separately need to store the number of encoded symbols as well. Another variation is to encode a fixed number of input symbols (say <dt-math>20</dt-math>), but at the same time ensure that the state does not overflow. One issue with both of these variants that, we lose something everytime we chose a new block which can be significantly suboptimal. Is there a way to utilize these partial bits? 
+  To apply rANS on a streaming input (or even a moderately large input), we can come up with some very simple modifications: One simple idea is to set a maximum state size of say, <dt-math>H = 2^{64} </dt-math> and encode as many symbols so that the state is not larger than <dt-math>H</dt-math>. In this case, we separately need to store the number of encoded symbols as well. Another variation is to encode a fixed number of input symbols (say <dt-math>20</dt-math>), but at the same time ensure that the state does not overflow. One issue with both of these variants that, we lose something everytime we chose a new block which can be significantly suboptimal. Is there a way to utilize these partial bits? 
   </p>
   <p>
-  One idea is to force the state to lie in a specific interval <dt-math> \mathcal{I} = [L,H] </dt-math> at every timestep <dt-math>t</dt-math>. Let the state at timestep <dt-math>X_{t-1}</dt-math> be in the range <dt-math>\mathcal{I}</dt-math>. Now, if on encoding the next symbol, say <dt-math>s_t=A</dt-math>, the state <dt-math>X_t = C_{rANS}(X_{t-1},s_t)</dt-math> is going to be in the range <dt-math>\mathcal{I}</dt-math>, then well and good :), we don't have to do anything. However, if not, then we need to reduce the value of the state <dt-math>X_{t-1}</dt-math> appropriately. Let <dt-math> \mathcal{I}_A = [L_A,H_A] </dt-math> be the interval corresponding to alphabet <dt-math>A</dt-math>, so that for any state <dt-math>z \in I_A</dt-math> on encoding we have <dt-math>C_{rANS}(z,A) \in I</dt-math>. Thus we need to preprocess of the state <dt-math>X_{t-1}</dt-math>, so that the mapped value <dt-math>X'_{t-1}</dt-math> lies in the range <dt-math>\mathcal{I}_A</dt-math>. For example:
+  One idea is to force the state to lie in a specific interval <dt-math> \mathcal{I} = [L,H] </dt-math> at every timestep <dt-math>t</dt-math>. Let the state <dt-math>X_{t-1}</dt-math> at timestep <dt-math>{t-1}</dt-math> be in the range <dt-math>\mathcal{I}</dt-math>. Now, if on encoding the next symbol <dt-math>s_t</dt-math>, the state <dt-math>X_t = C_{rANS}(X_{t-1},s_t)</dt-math> is going to be in the range <dt-math>\mathcal{I}</dt-math>, then well and good :), we don't have to do anything. However, if not, then we need to decrease the value of the state <dt-math>X_{t-1}</dt-math> appropriately. Let <dt-math> \mathcal{I}_A = [L_A,H_A] </dt-math> be the interval corresponding to alphabet <dt-math>A</dt-math>, so that for any state <dt-math>z \in I_A</dt-math> on encoding we have <dt-math>C_{rANS}(z,A) \in I</dt-math>. Then, we need to modify of the state <dt-math>X_{t-1}</dt-math>, so that the mapped value <dt-math>X'_{t-1}</dt-math> lies in the range <dt-math>\mathcal{I}_{s_t}</dt-math>. For example:
   <dt-math block>
   \begin{aligned}
   \mathcal{A} &= \{ A,B,C\}, \mathcal{F} = \{ 3, 3, 2\} \\
@@ -355,10 +355,67 @@
   \end{aligned}
   </dt-math>
 
-  Notice that, as the size of the interval <dt-math>|\mathcal{I}_A|</dt-math> is in general smaller than <dt-math>|\mathcal{I}|</dt-math>, due to which there is no one-to-one mapping between the mapped value <dt-math>X'_{t-1}</dt-math> and the original state <dt-math>X_{t-1}</dt-math>. Thus, while decoding, the decoder will need some additional information to correctly figure out the state <dt-math>X_{t-1}</dt-math> from <dt-math>X'_{t-1} = D_{rANS}(X_t)</dt-math>. This looks pretty messy. Is there an elegant way to perform this mapping (and the reverse mapping at the decoder)? It seems there is! Jarek Duda in the paper: <dt-cite key="duda2013asymmetric"></dt-cite> gives a simple but a very ingenious way to achieve this! 
+  Notice that, as the size of the interval <dt-math>|\mathcal{I}_A|</dt-math> is in general smaller than <dt-math>|\mathcal{I}|</dt-math>, due to which there is no one-to-one mapping between the mapped value <dt-math>X'_{t-1}</dt-math> and the original state <dt-math>X_{t-1}</dt-math>. Thus, during the decoding, although the decoder will be able to figure out <dt-math>s_t, X'_{t-1} = D_{rANS}(X_t)</dt-math>, it will need some additional information to correctly figure out the state <dt-math>X_{t-1}</dt-math> from <dt-math>X'_{t-1}</dt-math>. Is there an elegant way to perform this mapping (and the reverse mapping at the decoder)? It seems there is! Jarek Duda in the paper: <dt-cite key="duda2013asymmetric"></dt-cite> gives a simple but a very ingenious way to achieve this! 
   </p> 
    
-  <h4> Streaming-rANS Encoding Example [IN PROGRESS]</h4>
+  <h3> State Mapping </h3>
+  <p>
+  One simple idea of mapping the state <dt-math>X_{t-1} \in \mathcal{I}</dt-math> to the allowed range <dt-math>\mathcal{I}_{s_t}</dt-math> is as follows: take out bits from <dt-math>X_{t-1}</dt-math> until it lands in the interval <dt-math>\mathcal{I}_{s_t}</dt-math>. Thus, effectively the mapping can be described as: 
+  
+  <dt-math block> 
+  X'_{t-1} = \lfloor X_{t-1}/{2^r} \rfloor 
+  </dt-math>
+  where <dt-math> r </dt-math> is the smallest number, such that <dt-math>X'_{t-1} \in \mathcal{I}_{s_t}</dt-math> <br>
+  Is this always possible? Are there cases where we will jump over the interval <dt-math>\mathcal{I}_{s_t}</dt-math>? For example: Let <dt-math> \mathcal{I}_A = \{ 5,6,7,8\}</dt-math>. If we start with a state of <dt-math> 17 </dt-math>, then on taking out bits we obtain the sequence: <dt-math> 17,8,4 </dt-math>, none of which lie in the <dt-math>\mathcal{I}_A</dt-math> range. This problem can be solved by choosing the intervals <dt-math>\mathcal{I}_{s_t}</dt-math> sufficiently large, so that we do not jump over them. So how large do we need to choose the intervals? One sufficient condition is the following: 
+  <dt-math block>
+  \forall A \in \mathcal{A}: \mathcal{I}_A = [L_A, H_A], H_A \geq 2L_A-1 
+  </dt-math>
+  Intuitively, every interval <dt-math> \mathcal{I}_A </dt-math> spans an octave: due to which it is not possible to jump over the intervals by taking out bits. Also note that we want this condition to be satisfied by all symbol ranges <dt-math> I_A </dt-math>, corresponding to a <i> single </i> range <dt-math> I </dt-math>.  
+  </p>
+  <p>
+  If we now think about how the decoding should proceed, the it is also clear from the mapping, that the "additional information" required by the decoder to reverse map <dt-math>X'_{t-1}</dt-math> to <dt-math>X_{t-1}</dt-math> is going to be the <dt-math> r </dt-math> bits, <dt-math> b_{t-1} = mod(X_{t-1},2^r) </dt-math> taken out of <dt-math>X_{t-1}</dt-math>, since: 
+  <dt-math block> 
+  X_{t-1} = X'_{t-1}*2^{r} + b_{t-1} 
+  </dt-math>
+
+  These bits <dt-math> b_{t-1}</dt-math> are be appended to a single <dt-math> BitStream </dt-math>, at every timestep. Note that, in general the decoder also needs to know the number of bits to pop out from this <dt-math> BitStream </dt-math>, since they can be different at different timesteps. One simple solution is to perform exactly the reverse of what the encoder does, i.e: Read in bits from the <dt-math> BitStream </dt-math>, and append them to the mapped state <dt-math> X'_{t-1} </dt-math> until it lands in the interval <dt-math>\mathcal{I}</dt-math>. Will this always work? One problem case is when there are more than <dt-math> 1 </dt-math> possible solutions for state <dt-math>X_{t-1}</dt-math> are in the valid interval <dt-math>\mathcal{I}</dt-math>, and the decoder stops early. For Example:
+  <dt-math block>
+  \begin{aligned}
+   \mathcal{I} &= \{ 8,9,10,\ldots,16,17 \} \\
+   X'_{t-1} &= 4 \\
+   BitStream &= \{0100\ldots\} 
+   \end{aligned}
+   </dt-math>
+   Then, the reverse mapped state <dt-math> X_{t-1} </dt-math> can be <dt-math> \{8,17,35,\ldots\} </dt-math>, out of which both <dt-math> 8,17 </dt-math> are valid states. Now, if the true state <dt-math> X_{t-1} = 17</dt-math>, then we are going to have an error as the decoder is going to stop after reading a single bit from the <dt-math>BitStream</dt-math> (as <dt-math>8 \in \mathcal{I}</dt-math>). This problem can be solved by choosing the interval <dt-math>\mathcal{I}</dt-math> small enough, so that there is only one possibility for the reverse mapping of <dt-math> X'_{t-1} </dt-math> to the state <dt-math> X_{t-1} </dt-math>. How small should <dt-math>\mathcal{I} </dt-math> be? One sufficient condition is: 
+  <dt-math block>
+  \mathcal{I} = [L, H], H \leq 2L-1 
+  </dt-math>
+  Notice that this condition is the exact opposite of what we got during the encoding for the symbol ranges! The intuition here is also analogous: adding bits increases the state more than twice, thus we choose the range <dt-math>\mathcal{I} </dt-math>, so that no number is larger than twice the other.
+  </p>
+
+  <h3> Streaming-rANS Final Form </h3>
+  <p>
+  Let us summarize all the conditions on the ranges we discussed in the previous section: 
+
+  <dt-math block>
+  \begin{aligned}
+  &\forall A \in \mathcal{A}, \forall z \in \mathcal{I}_A : C_{rANS}(z,A) \in \mathcal{I} \\
+  &\forall A \in \mathcal{A} : \mathcal{I}_A = [L_A, H_A], H_A \geq 2L_A-1 \\ 
+  &\mathcal{I} = [L, H], H \leq 2L-1 
+  \end{aligned}
+  </dt-math>
+
+  Are there some simple parameters for which we achieve all these conditions? You bet, there are! Jarek Duda, again in his paper <dt-cite key="duda2013asymmetric"></dt-cite>, gives a simple rule for which all these conditions are satisfied. For any integer <dt-math> l </dt-math>:
+   <dt-math block>
+  \begin{aligned}
+  \mathcal{I} &= [lM, 2lM-1] \\
+  \forall a \in \mathcal{A}: \mathcal{I}_{a} &= [lF_a, 2lF_a - 1]
+  \end{aligned} 
+   </dt-math>
+
+  You can tryout the Streaming-rANS examples below:
+  </p>
+  <h4> Streaming-rANS Encoding Example </h4>
    <p>
    Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts_streaming" value="3,3,2"> <br>
    Input Symbol String: <input type="text" id="input_text_streaming" value="0,1,0,2,2,0,2,1,2"> <br>
