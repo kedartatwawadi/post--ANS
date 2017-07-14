@@ -220,8 +220,16 @@
       X_t = \left\lfloor \frac{X_{t-1}}{F_{s_t}} \right\rfloor * M + C_{s_t} + mod(X_{t-1}, F_{s_t}) 
    </dt-math>
     
-   Thats all! This is the encoding step for the rANS. 
+   Thats all! This is the encoding step for the rANS. We also present a python function snippet for this encoding step:
+   <dt-code block language="python">
+  def C_rANS(s, state, symbol_counts):
+    total_counts = np.sum(symbol_counts)  #Represents M
+    cumul_counts = np.insert(np.cumsum(symbol_counts),0,0) #the cumulative frequencies
 
+    s_count = symbol_counts[s] #current symbol count/frequency
+    next_state = (state/s_count)*total_counts + cumul_sum[s] + (state % s_count) 
+    return next_state
+  </dt-code>
    <h4> rANS Encoding Example</h4>
    <p>
    Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts" value="3,3,2"> <br>
@@ -243,6 +251,23 @@
       X_{t-1} &=  \left\lfloor \frac{X_t}{M} \right\rfloor * F_{s_t} + slot - C_{s_t} 
       \end{aligned}
    </dt-math>
+
+   A python function snippet for the decoder:
+ <dt-code block language="python">
+ def D_rANS(state, symbol_counts, cumul_counts):
+    total_counts = np.sum(symbol_counts)  #Represents M
+    cumul_counts = np.insert(np.cumsum(symbol_counts),0,0) #the cumulative frequencies
+
+    #The Cumulative frequency inverse function
+    def cumul_inverse(y): 
+      for i,_s in enumerate(cumul_sum): 
+        if y < _s: return i-1
+
+    slot = state % total_counts #compute the slot     
+    s = cumul_inverse(y) #decode the symbol
+    prev_state = (state/total_counts)*symbol_count[s] + slot - cumul_sum[s] #update the state
+    return s,prev_state
+ </dt-code>
 
    <h4> rANS Decoding Example </h4>
    <p>
@@ -414,6 +439,21 @@
    </dt-math>
 
   It is easy to see why this satisfies the second and third conditions mentioned above. The first condition is true since: <dt-math> C_{rANS}(lF_a,a) = lM   </dt-math> and <dt-math> C_{rANS}(2lF_a) = 2lM \notin \mathcal{I} </dt-math>. Phew! that was quite a bit of engineering to get rANS to get working in practice! For completeness, take a look at the python code for Streaming-rANS! You can also tryout the Streaming-rANS examples below. 
+  <dt-code block language="python">
+  def Streaming_rANS_encoder(s_input, symbol_counts, range_factor):
+    total_counts = np.sum(symbol_counts)  # Represents M
+    bitstream = [] #initialize stream
+    state = low_level*total_counts #state initialized to lM
+
+    for s in s_input: #iterate over the input   
+      # Output bits to the stream to bring the state in the range for the next encoding
+      while state >= range_factor*symbol_counts[s]:
+        bitstream.append( state%2 )
+        state = state/2
+
+      state = C_rANS(s, state, symbol_counts) # The rANS encoding step
+    return state, bitstream
+  </dt-code>
   </p>
   <h4> Streaming-rANS Encoding Example </h4>
    <p>
