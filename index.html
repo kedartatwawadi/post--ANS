@@ -341,36 +341,36 @@
 
   <h2> Streaming-rANS [IN PROGRESS]</h2>
   <p>
-  To apply rANS on a streaming input (or even a moderately large input), we can come up with some very simple modifications: One simple idea is to set a maximum state size of say, <dt-math>H = 2^{64} </dt-math> and encode as many symbols so that the state is not larger than <dt-math>H</dt-math>. In this case, we separately need to store the number of encoded symbols as well. Another variation is to encode a fixed number of input symbols (say <dt-math>20</dt-math>), but at the same time ensure that the state does not overflow. One issue with both of these variants that, we lose something everytime we chose a new block which can be significantly suboptimal. Is there a way to utilize these partial bits? 
+  To apply rANS on a streaming input (or even a moderately large input), we can come up with some very simple modifications: One simple idea is to set a maximum state size of say, <dt-math>H = 2^{64} </dt-math> and encode encode the symbols in chunks so that containing as many symbols so that the state is not larger than <dt-math>H</dt-math>. In this case, along with the final state, we also need to store the number of symbols in every chunk of the input. Another variation is to encode in blocks containing a fixed number of input symbols (say <dt-math>20</dt-math>), but at the same time ensure that the state does not overflow. One issue with both of these variants that, we always lose some bits everytime we chose a new chunk or a block. Is there a way to utilize these partial bits? 
   </p>
   <p>
-  One idea is to force the state to lie in a specific interval <dt-math> \mathcal{I} = [L,H] </dt-math> at every timestep <dt-math>t</dt-math>. Let the state <dt-math>X_{t-1}</dt-math> at timestep <dt-math>{t-1}</dt-math> be in the range <dt-math>\mathcal{I}</dt-math>. Now, if on encoding the next symbol <dt-math>s_t</dt-math>, the state <dt-math>X_t = C_{rANS}(X_{t-1},s_t)</dt-math> is going to be in the range <dt-math>\mathcal{I}</dt-math>, then well and good :), we don't have to do anything. However, if not, then we need to decrease the value of the state <dt-math>X_{t-1}</dt-math> appropriately. Let <dt-math> \mathcal{I}_a = [L_a,H_a] </dt-math> be the interval corresponding to alphabet <dt-math>a</dt-math>, so that for any state <dt-math>z \in I_a</dt-math> on encoding we have <dt-math>C_{rANS}(z,a) \in I</dt-math>. Then, we need to modify of the state <dt-math>X_{t-1}</dt-math>, so that the mapped value <dt-math>X'_{t-1}</dt-math> lies in the range <dt-math>\mathcal{I}_{s_t}</dt-math>. For example:
+  One idea is to force the state to lie in a specific interval <dt-math> \mathcal{I} = [L,H] </dt-math> at every timestep <dt-math>t</dt-math>. Let the state <dt-math>X_{t-1}</dt-math> at timestep <dt-math>{t-1}</dt-math> be in the range <dt-math>\mathcal{I}</dt-math>. Now, if on encoding the next symbol <dt-math>s_t</dt-math>, the state <dt-math>X_t = C_{rANS}(X_{t-1},s_t)</dt-math> is going to be in the range <dt-math>\mathcal{I}</dt-math>, then well and good :), we don't have to do anything. However, if not, then we need to decrease the value of the state <dt-math>X_{t-1}</dt-math> appropriately. Let <dt-math> {I}_a = [L_a,H_a] </dt-math> be the interval corresponding to alphabet <dt-math>a</dt-math>, so that for any state <dt-math>z \in {I}_a</dt-math> on encoding we have <dt-math>C_{rANS}(z,a) \in I</dt-math>, and for <dt-math>z \notin I_a, C_{rANS}(z,a) \notin \mathcal{I}</dt-math>. Then, we essentially need to modify of the state <dt-math>X_{t-1}</dt-math>, so that the mapped value <dt-math>X'_{t-1}</dt-math> lies in the range <dt-math>{I}_{s_t}</dt-math>. For example:
   <dt-math block>
   \begin{aligned}
   \mathcal{A} &= \{ A,B,C\}, \mathcal{F} = \{ 3, 3, 2\} \\
   \mathcal{I} &= \{ 8,9,10,\ldots,14,15\} \\ 
-  \mathcal{I}_A &= \{ 3,4,5\} \\
-  \mathcal{I}_B &= \{ 3,4,5\} \\
-  \mathcal{I}_C &= \{ 2,3\} 
+  {I}_A &= \{ 3,4,5\} \\
+  {I}_B &= \{ 3,4,5\} \\
+  {I}_C &= \{ 2,3\} 
   \end{aligned}
   </dt-math>
 
-  Notice that, as the size of the interval <dt-math>|\mathcal{I}_a|</dt-math> is in general smaller than <dt-math>|\mathcal{I}|</dt-math>, due to which there is no one-to-one mapping between the mapped value <dt-math>X'_{t-1}</dt-math> and the original state <dt-math>X_{t-1}</dt-math>. Thus, during the decoding, although the decoder will be able to figure out <dt-math>s_t, X'_{t-1} = D_{rANS}(X_t)</dt-math>, it will need some additional information to correctly figure out the state <dt-math>X_{t-1}</dt-math> from <dt-math>X'_{t-1}</dt-math>. Is there an elegant way to perform this mapping (and the reverse mapping at the decoder)? It seems there is! Jarek Duda in the paper: <dt-cite key="duda2013asymmetric"></dt-cite> gives a simple but a very ingenious way to achieve this! 
+  Notice that, as the size of the interval <dt-math>|{I}_a|</dt-math> is in general smaller than <dt-math>|\mathcal{I}|</dt-math>, there is no one-to-one mapping between the mapped value <dt-math>X'_{t-1}</dt-math> and the original state <dt-math>X_{t-1}</dt-math>. Thus, during the decoding, although the decoder will be able to figure out <dt-math>s_t, X'_{t-1} = D_{rANS}(X_t)</dt-math>, it will need some additional information to correctly figure out the state <dt-math>X_{t-1}</dt-math> from <dt-math>X'_{t-1}</dt-math>. Is there an elegant way to perform this mapping (and the reverse mapping at the decoder)? It seems there is! Jarek Duda in the paper: <dt-cite key="duda2013asymmetric"></dt-cite> gives a simple but a very ingenious way to achieve this! 
   </p> 
    
   <h3> State Mapping </h3>
   <p>
-  One simple idea of mapping the state <dt-math>X_{t-1} \in \mathcal{I}</dt-math> to the allowed range <dt-math>\mathcal{I}_{s_t}</dt-math> is as follows: take out bits from <dt-math>X_{t-1}</dt-math> until it lands in the interval <dt-math>\mathcal{I}_{s_t}</dt-math>. Thus, effectively the mapping can be described as: 
+  One simple idea of mapping the state <dt-math>X_{t-1} \in \mathcal{I}</dt-math> to the allowed range <dt-math>{I}_{s_t}</dt-math> is as follows: take out bits from <dt-math>X_{t-1}</dt-math> until it lands in the interval <dt-math>{I}_{s_t}</dt-math>. Thus, effectively the mapping can be described as: 
   
   <dt-math block> 
   X'_{t-1} = \lfloor X_{t-1}/{2^r} \rfloor 
   </dt-math>
-  where <dt-math> r </dt-math> is the smallest number, such that <dt-math>X'_{t-1} \in \mathcal{I}_{s_t}</dt-math> <br>
-  Is this always possible? Are there cases where we will jump over the interval <dt-math>\mathcal{I}_{s_t}</dt-math>? For example: Let <dt-math> \mathcal{I}_A = \{ 5,6,7,8\}</dt-math>. If we start with a state of <dt-math> 17 </dt-math>, then on taking out bits we obtain the sequence: <dt-math> 17,8,4 </dt-math>, none of which lie in the <dt-math>\mathcal{I}_A</dt-math> range. This problem can be solved by choosing the intervals <dt-math>\mathcal{I}_{s_t}</dt-math> sufficiently large, so that we do not jump over them. So how large do we need to choose the intervals? One sufficient condition is the following: 
+  where <dt-math> r </dt-math> is the smallest number, such that <dt-math>X'_{t-1} \in {I}_{s_t}</dt-math> <br>
+  Is this always possible? Are there cases where we will jump over the interval <dt-math>{I}_{s_t}</dt-math>? For example: Let <dt-math> {I}_A = \{ 5,6,7,8\}</dt-math>. If we start with a state of <dt-math> 17 </dt-math>, then on taking out bits we obtain the sequence: <dt-math> 17,8,4 </dt-math>, none of which lie in the <dt-math>{I}_A</dt-math> range. This problem can be solved by choosing the intervals <dt-math>{I}_{s_t}</dt-math> sufficiently large, so that we do not jump over them. So how large do we need to choose the intervals? One sufficient condition is the following: 
   <dt-math block>
-  \forall a \in \mathcal{A}: \mathcal{I}_a = [L_a, H_a], H_a \geq 2L_a-1 
+  \forall a \in \mathcal{A}: {I}_a = [L_a, H_a], H_a \geq 2L_a-1 
   </dt-math>
-  Intuitively, every interval <dt-math> \mathcal{I}_a </dt-math> spans an octave: due to which it is not possible to jump over the intervals by taking out bits. Also note that we want this condition to be satisfied by all symbol ranges <dt-math> \mathcal{I}_a </dt-math>, corresponding to a <i> single </i> range <dt-math> I </dt-math>.  
+  Intuitively, every interval <dt-math> \mathcal{I}_a </dt-math> spans an octave: due to which it is not possible to jump over the intervals by taking out bits. Also note that we want this condition to be satisfied by all symbol ranges <dt-math> \mathcal{I}_a, \forall a \in \mathcal{A} </dt-math>, corresponding to a <i> single </i> range <dt-math> \mathcal{I} </dt-math>.  
   </p>
   <p>
   If we now think about how the decoding should proceed, the it is also clear from the mapping, that the "additional information" required by the decoder to reverse map <dt-math>X'_{t-1}</dt-math> to <dt-math>X_{t-1}</dt-math> is going to be the <dt-math> r </dt-math> bits, <dt-math> b_{t-1} = mod(X_{t-1},2^r) </dt-math> taken out of <dt-math>X_{t-1}</dt-math>, since: 
