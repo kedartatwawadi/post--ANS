@@ -140,7 +140,7 @@ function rANS_streaming_encoder() {
 }
 
 
-function rANS_streaming_decoder() {
+function rANS_streaming_decoder(){
     // Input function
     var countsVal = document.getElementById("symbol_counts_streaming_decoder").value;
     var num_symbols = Number(document.getElementById("num_streaming_decoder").value);
@@ -182,3 +182,65 @@ function rANS_streaming_decoder() {
     output_string += "<tt> <small> <br> Final State: " + state + "</tt> </small>"
     document.getElementById("rANS_streaming_decoder_output").innerHTML = output_string;    
 }
+
+
+/*******************************************************************************
+ TANS Variant
+********************************************************************************/
+
+function tANS_encoder(){
+    // Input function
+    var countsVal = document.getElementById("symbol_counts_tANS").value;
+    var symbol_counts = countsVal.split(',').map(function(countsVal){return Number(countsVal);});
+    // compute cumulative frequencies
+    var cumul_counts = []
+    var sum_counts = 0
+    for (var i=0;i < symbol_counts.length; i++){
+        cumul_counts.push(sum_counts);
+        sum_counts += symbol_counts[i];
+    }
+    
+
+    var output_state_string = "<table width=\"60%\"> <tr> <th> Input State </th>"
+    var output_bits_string = "<table width=\"60%\"> <tr> <th> Input State </th>" 
+
+    for (var s=0; s < symbol_counts.length; s++){
+        output_state_string += "<th> " + String.fromCharCode(65+s) + " </th>"  
+        output_bits_string +=  "<th> " + String.fromCharCode(65+s) + " </th>"
+    }
+    output_state_string += "</tr>"  
+    output_bits_string +=  "</tr>"
+
+
+    for (var state=sum_counts; state < 2*sum_counts; state++){
+        output_state_string += "<tr><th>" + state + "</th>"   
+        output_bits_string +=  "<tr><th>" + state + "</th>"
+        for (var s=0; s < symbol_counts.length; s++){
+            var Fs = symbol_counts[s]
+            var Cs = cumul_counts[s]
+
+            var out_bits = ""
+            var out_state = state
+            while (out_state >= 2*Fs){
+                out_bits += String(out_state % 2)
+                out_state = Math.floor(out_state/2)
+            }
+            out_state = Math.floor(out_state/Fs)*sum_counts + Cs + (out_state % Fs)
+            
+            output_state_string += "<th> " + out_state + " </th>"
+            output_bits_string += "<th> " + out_bits + " </th>"
+        }
+        output_state_string += "</tr>"   
+        output_bits_string +=  "</tr>"
+    }
+        
+
+    output_state_string += "</table>"
+    output_bits_string += "</table>"
+    var output_string = output_state_string + output_bits_string
+    
+    document.getElementById("tANS_encoder_output").innerHTML = output_string;    
+}
+
+
+
