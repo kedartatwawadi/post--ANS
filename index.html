@@ -254,7 +254,7 @@
 
    A python function snippet for the decoder:
  <dt-code block language="python">
- def D_rANS(state, symbol_counts, cumul_counts):
+ def D_rANS(state, symbol_counts):
     total_counts = np.sum(symbol_counts)  #Represents M
     cumul_counts = np.insert(np.cumsum(symbol_counts),0,0) #the cumulative frequencies
 
@@ -438,7 +438,9 @@
   \end{aligned} 
    </dt-math>
 
-  It is easy to see why this satisfies the second and third conditions mentioned above. The first condition is true since: <dt-math> C_{rANS}(lF_a,a) = lM   </dt-math> and <dt-math> C_{rANS}(2lF_a) = 2lM \notin \mathcal{I} </dt-math>. Phew! that was quite a bit of engineering to get rANS to get working in practice! For completeness, take a look at the python code for Streaming-rANS! You can also tryout the Streaming-rANS examples below. 
+  It is easy to see why this satisfies the second and third conditions mentioned above. The first condition is true since: <dt-math> C_{rANS}(lF_a,a) = lM   </dt-math> and <dt-math> C_{rANS}(2lF_a) = 2lM \notin \mathcal{I} </dt-math>. Phew! that was quite a bit of engineering to get rANS to get working in practice! For completeness, take a look at the python code for Streaming-rANS! 
+  <h4> Streaming-rANS Encoder Code </h4> 
+  <p>
   <dt-code block language="python">
   def Streaming_rANS_encoder(s_input, symbol_counts, range_factor):
     total_counts = np.sum(symbol_counts)  # Represents M
@@ -455,6 +457,26 @@
     return state, bitstream
   </dt-code>
   </p>
+  
+  <h4> Streaming-rANS Decoder Code </h4>
+  <p>
+  <dt-code block language="python"> 
+  def Streaming_rANS_decoder(state, bitstream, symbol_counts, range_factor):
+      total_counts = np.sum(symbol_counts)  #Represents M
+      
+      #perform the rANS decoding
+      s_decoded,state = D_rANS(state, symbol_counts) 
+
+      #remap the state into the acceptable range
+      while state < range_factor*total_counts:
+          bits = bitstream.pop()
+          state = state*2 + bits
+              
+      return s_decoded,state
+  </dt-code>
+  You can also tryout the Streaming-rANS examples below.
+  </p>
+
   <h4> Streaming-rANS Encoding Example </h4>
    <p>
    Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts_streaming" value="3,3,2"> <br>
