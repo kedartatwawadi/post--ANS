@@ -495,6 +495,22 @@
    </p>
    <p id="rANS_streaming_decoder_output"></p>
 
+  <h3> Practical Aspects </h3>
+  <p>
+  Based on the discussion presented, Streaming rANS looks like a very good practical replacement for Arithmetic coding and range coding. However, there are a few more tweaks which can be used to further improve the rANS encoding:
+  <ol>
+  <li> <b> Streaming out bytes: </b> Our Streaming-rANS construction was based on the premise that we are streaming out a bit at a time during the encoding, and reading in bits during the decoding. Generally in practice, it is much more efficient to write/read larger chunks of bits at a time, such as a byte or a word of <dt-math>64</dt-math> bits. We can infact achieve this objective by a simple change to the Streaming-rANS architecture: Lets say we are streaming <dt-math> k </dt-math> bits at a time, then we choose the symbol ranges so that:   
+
+  <dt-math block>
+  \begin{aligned}
+  \mathcal{I} &= [lM, 2^klM-1] \\
+  \forall a \in \mathcal{A}: \mathcal{I}_{a} &= [lF_a, 2^klF_a - 1]
+  \end{aligned}
+  </dt-math>
+
+  This makes sure that the streaming works fine
+  <li> <b> Alias method for slot selection: </b> 
+  <li> <b> A different View of Streaming rANS: </b>
 
   <h4> Streaming-rANS as a FSE </h4>
    <p>
@@ -503,6 +519,7 @@
    </p>
    <p id="tANS_encoder_output"></p>
 
+  </ol>
 
 </dt-article>
 
