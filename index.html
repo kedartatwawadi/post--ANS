@@ -130,8 +130,8 @@
 </svg>
 
 <dt-article class="centered">
-  <h1>What is ANS?</h1>
-  <h2>Understanding the new entropy coder: Asymmetric Numeral Systems</h2>
+  <h1>What is Asymmetric Numeral Systems?<h1>
+  <h2>Understanding the new entropy coder family</h2>
   <dt-byline></dt-byline>
   <p>Recently while attending a talk at the Stanford Compression Forum, I heard about a new class of entropy coders called the Asymmetric Numeral Systems coders (ANS). Considering Arithmetic coding and Huffman coding <dt-cite key="cover2012elements"></dt-cite> have essentially resolved the problem of entropy coding, it is surprising that there is a new development in the field of entropy coding. Today, just a few years after the original paper <dt-cite key="duda2013asymmetric"></dt-cite> came out, ANS has already been incorporated into numerous compressors, including Zstandard (facebook), LZFSE (Apple), CRAM (Genomic SAM file compression) etc. The ANS Coder is not a single compressor but a class of entropy coders for a given distribution. The most important thing they achieve is obtaining very accurate compression at very high compression and decompression speeds (like Pied Piper, ANS significantly improves upon the Weissman score :) ). </p>
 
@@ -538,6 +538,24 @@
    <p id="tANS_encoder_output"></p>
    This use of cache encoding and decoding tables can lead to massive speed-ups, as all we are doing is looking for the values in a lookup-table: thus, making the Streaming-rANS encoding/decoding as fast as Huffman coding! Wow! This Cached Streaming-rANS coder infact belongs to a bigger class of ANS coders, known as <b> tANS Coders </b>, which is aptly an abbreviation for tabled-ANS. In the next section we will try to understand the tANS class of coders in more detail.
   </ol>
+
+ <hr>
+<h2> tANS [In Progress]</h2>
+<p>
+We took a look at the cached encoding tables for Streaming-rANS in the previous section. Let us also look at the decoding tables for the same. 
+</p>
+<p>
+ Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts_tANS_decoder" value="3,3,2"> <br>
+ <button onclick="tANS_decoder()">Try it</button> 
+ </p>
+ <p id="tANS_decoder_output"></p>
+<p>
+If you notice, the symbol decoding is still very simple. Every state in the range <dt-math> \mathcal{I} = [lM, 2lM-1] </dt-math> is decoded into a unique symbol. In fact due to table being formed using the rANS construct, there are distinct output ranges for every symbol. But note that as we are now storing the encoding and decoding tables, one can get very creative with the encoding/decoding. We can just permute this state assignment corresponding to every symbol and that will still give us a valid Finite-State Entropy coder. This is pretty amazing as it gives us an exponentially large family of Finite-State Encoders of a given state size. 
+</p>
+
+<p> 
+
+</p>
 
 </dt-article>
 

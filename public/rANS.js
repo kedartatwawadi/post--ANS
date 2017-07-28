@@ -164,7 +164,7 @@ function rANS_streaming_decoder(){
         return (i-1)
     }
 
-    var output_string = "<table width=\"50%\">" + "<tr> <th>Output </th> <th> State </th></tr>"
+    var output_string = "<table width=\"50%\">" + "<tr> <th>Decoded Symbol </th> <th> State </th></tr>"
     for (var j=0; j < num_symbols; j++){
         var slot = state % sum_counts
         var s = c_inv(slot)
@@ -201,8 +201,8 @@ function tANS_encoder(){
     }
     
 
-    var output_state_string = "<table width=\"40%\"> <tr> <th> Input State </th>"
-    var output_bits_string = "<table width=\"40%\"> <tr> <th> Input State </th>" 
+    var output_state_string = "<table width=\"40%\"> <caption> Output State</caption> <tr> <th> Input State </th>"
+    var output_bits_string = "<table width=\"40%\"> <caption> BitStream Output</caption><tr> <th> Input State </th>" 
 
     for (var s=0; s < symbol_counts.length; s++){
         output_state_string += "<th> " + String.fromCharCode(65+s) + " </th>"  
@@ -235,12 +235,57 @@ function tANS_encoder(){
     }
         
 
-    output_state_string += "</table>"
+    output_state_string += "</table><br>"
     output_bits_string += "</table>"
     var output_string = output_state_string + output_bits_string
     
     document.getElementById("tANS_encoder_output").innerHTML = output_string;    
 }
 
+
+
+function tANS_decoder(){
+// Input function
+    var countsVal = document.getElementById("symbol_counts_tANS_decoder").value;
+    var symbol_counts = countsVal.split(',').map(function(countsVal){return Number(countsVal);});
+    // compute cumulative frequencies
+    var cumul_counts = []
+    var sum_counts = 0
+    for (var i=0;i < symbol_counts.length; i++){
+        cumul_counts.push(sum_counts);
+        sum_counts += symbol_counts[i];
+    }
+    
+
+    function c_inv(y){
+        for (var i=0;i < symbol_counts.length; i++){
+            if (y < cumul_counts[i]) break;        
+        }
+        return (i-1)
+    }
+
+
+    var decoder_table_string = "<table width=\"80%\">  <tr> <th> Input State: </th>"
+    for (var state=sum_counts; state < 2*sum_counts; state++){
+        decoder_table_string += "<th> " + state + "</th>"
+    }
+    decoder_table_string += "</tr>"
+    decoder_table_string += "<tr> <th> Decoded Symbol: </th>"
+    for (var s=0; s < symbol_counts.length; s++){
+        var count  = symbol_counts[s]
+        var symbol = String.fromCharCode(65+s)
+        for (var i=0; i < count; i++){
+            decoder_table_string += "<th>" + symbol + "</th>"
+        }
+    }
+    decoder_table_string += "</tr>"
+
+   
+    decoder_table_string += "</table><br>"
+    var output_string = decoder_table_string
+    
+    document.getElementById("tANS_decoder_output").innerHTML = output_string; 
+
+}
 
 
