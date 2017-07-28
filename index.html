@@ -133,10 +133,11 @@
   <h1>What is ANS?</h1>
   <h2>Understanding the new entropy coder: Asymmetric Numeral Systems</h2>
   <dt-byline></dt-byline>
-  <p>Recently while attending a talk at the Stanford Compression Forum, I heard about a new class of entropy coders called the Asymmetric Numeral Systems coders (ANS). Considering Arithmetic coding and Huffman coding <dt-cite key="cover2012elements"></dt-cite> have essentially resolved the problem of entropy coding, it is surprising that there is a new development in the field of entropy coding. Today, just a few years after the original paper <dt-cite key="duda2013asymmetric"></dt-cite> came out, ANS has already been incorporated into numerous compressors, including Zstandard (facebook), LZFSE (Apple), CRAM (Genomic SAM file compression) etc. I was curious to understand what exactly did this new kid on the block did, but found the original paper pretty difficult to follow. Thanks to some amazing and detailed blog posts, I was able to make some sense out of the paper! The ANS Coder is not a single compressor but a class of entropy coders for a given distribution. The most important thing they achieve is obtaining very accurate compression at very high compression and decompression speeds (like Pied Piper, ANS significantly improves upon the Weissman score :) ). </p>
+  <p>Recently while attending a talk at the Stanford Compression Forum, I heard about a new class of entropy coders called the Asymmetric Numeral Systems coders (ANS). Considering Arithmetic coding and Huffman coding <dt-cite key="cover2012elements"></dt-cite> have essentially resolved the problem of entropy coding, it is surprising that there is a new development in the field of entropy coding. Today, just a few years after the original paper <dt-cite key="duda2013asymmetric"></dt-cite> came out, ANS has already been incorporated into numerous compressors, including Zstandard (facebook), LZFSE (Apple), CRAM (Genomic SAM file compression) etc. The ANS Coder is not a single compressor but a class of entropy coders for a given distribution. The most important thing they achieve is obtaining very accurate compression at very high compression and decompression speeds (like Pied Piper, ANS significantly improves upon the Weissman score :) ). </p>
 
   <p> In this series of posts, we will try to improve our understanding of the ANS family of coders. But before we do that, lets revise the two of the most important entropy coders we have: Huffman and Arithmetic Coders. </p>
 
+  <hr>
   <h2> Huffman and Arithmetic Coders </h2>
   <p>
   Huffman coding (and for that matter any prefix-free codes) are the fastest entropy coders, as all they do is perform table-lookup for the unique prefix-free code for the input symbol. The prefix-free nature of the codes also allows for efficient decoding using a binary tree. However, in some cases the Huffman coder can be significantly suboptimal in terms of compression, with a gap with the entropy as high as <dt-math> 1 bit/symbol </dt-math>. One can also imagine huffman coding as a Finite State Entropy coder (FSE) with a single state: For every input alphabet, the encoder outputs the corresponding prefix-free code (from the lookup-table) and transitions back to the same state. </p>
@@ -147,6 +148,8 @@
  -->
   <p> The ANS family of coders forms the bridge between these two extremes of entropy coders, where we can design a k-state FSE coder (for a wide range of <dt-math> k </dt-math> values), which results in better compression optimality than Huffman coding with a slight decrease in the speed. This ability of graceful tradeoff between the compression vs speed is crucial to what makes the ANS family so useful in practice.  We will first look at one member of the ANS family of coders: <b>rANS</b>, which is an acronym for range-ANS due to its similarities to the arithmetic encoder.   
   </p>
+
+  <hr>
 
  <h2> rANS </h2>
  <p>
@@ -359,12 +362,16 @@
   <li><b> Choice of <dt-math> \mathcal{F} </dt-math> frequencies </b>: Note that one operation we need to perform is choosing frequency counts <dt-math> F_a </dt-math> which correctly approximate the true probabilities <dt-math> q_a \approx F_a/M = p_a</dt-math>. This is one crucial step of inaccuracy in the ANS design (unlike Arithmetic encoding), as we know that designing a code for <dt-math> p_a </dt-math> distribution, when the true distribution is <dt-math> q_a </dt-math> always leads to a loss equivalent to the KL-divergence: <dt-math> D(q_a||p_a) </dt-math>. 
   <li><b> Reverse Encoding </b>: Notice that unlike Arithmetic coder, rANS decodes the input in a <i>reverse</i> order. One simple solution to this problem is processing the inputs in blocks and parsing the input in a reverse direction during encoding. This would add to the latency in the encoding, but practically seems alright as input is generally processed and transmitted in blocks anyway. 
   <li><b> Adaptive context-based rANS</b>: One of the most popular usages of Arithmetic coding is with context-based modeling. A lot of modeling techniques such as PPM, CTW, Markov modeling etc. employ arithmetic coding over a distribution modeled using the past samples. This modeling becomes tricky for rANS due to its reverse order encoding. rANS essentially needs to look <i> ahead </i> of the current reverse-order input during the encoding, so that the decoder has the necessary information to figure out the context model
- <!--  <li><b> Alias mapping instead of cumulative inverse </b>: Recall that the encoding, for the input symbol <dt-math> s_t </dt-math>, we were mapping <dt-math> slot </dt-math> to the range <dt-math> [C_{s_t, C_{s_{t+1}} - 1] </dt-math>. During the decoding, in the <dt-math> C\_inv </dt-math> function, we need to perform binary search to locate the appropriate range to decode <dt-math> s_t </dt-math>, which can be relatively slow as compared with other rANS operations. If we understand the encoding, then it is clear that we need to map the <dt-math> slot </dt-math> to a range of size <dt-math> F_{s_t} </dt-math>, however we do not need to map it to a continuous range.  -->
+  <!-- <li> <b> Alias method for slot selection</b>: If you observe the decoder includes a comparatively expensive step of the <dt-math>s_t = C_{inv}(slot) </dt-math>, which is the symbol-decoding step using the cumulative inverse function. The way in which we have implemented the inverse function in the python snippet, it has complexity <dt-math> O(M) </dt-math>. The implementation can be made more efficient by use of Binary search trees, or by employing more memory. Interestingly, there have been some approaches which subtly change the rANS encoding itself (specifically the <dt-math> slot </dt-math> mapping) to make the symbol-decoding a constant time operation! One of them is the Alias method developed by: Fabian Giesen. Although we wont be discussing it here, you can take a look here! -->
+
+  <li><b> Alias mapping instead of cumulative inverse </b>: Recall that the encoding, for the input symbol <dt-math> s_t </dt-math>, we were mapping <dt-math> slot </dt-math> to the range <dt-math> [C_{s_t}, C_{s_{t+1}} - 1] </dt-math>. During the decoding, in the <dt-math> C\_inv </dt-math> function, we need to perform binary search to locate the appropriate range to decode <dt-math> s_t </dt-math>, which can be relatively slow as compared with other rANS operations. If we understand the encoding, then it is clear that we need to map the <dt-math> slot </dt-math> to a range of size <dt-math> F_{s_t} </dt-math>, however we do not need to map it to a continuous range. This observation is used by Fabian Giesen to subtly improve the rANS decoding, using a technique known as Alias mapping. You can read more about it here:
+
   <li><b> Finite Precision Arithmetic</b>: In practice, as we will be using finite precision arithmetic, the <dt-math> state </dt-math> variable would be bounded by something like: <dt-math> 2^{64} </dt-math>. Although this seems large, rANS encoding would very rapidly reach this limit (infact exponentially). Thus, we need modify the rANS construction to have the state bounded in some range. We will next look at this important variant, called  <i>streaming-rANS</i>. 
   </ol>
   </p>
 
-  <h2> Streaming-rANS [IN PROGRESS]</h2>
+  <hr>
+  <h2> Streaming-rANS</h2>
   <p>
   To apply rANS on a streaming input (or even a moderately large input), we can come up with some very simple modifications: One simple idea is to set a maximum state size of say, <dt-math>H = 2^{64} </dt-math> and encode encode the symbols in chunks so that containing as many symbols so that the state is not larger than <dt-math>H</dt-math>. In this case, along with the final state, we also need to store the number of symbols in every chunk of the input. Another variation is to encode in blocks containing a fixed number of input symbols (say <dt-math>20</dt-math>), but at the same time ensure that the state does not overflow. One issue with both of these variants that, we always lose some bits everytime we chose a new chunk or a block. Is there a way to utilize these partial bits? 
   </p>
@@ -495,6 +502,18 @@
    </p>
    <p id="rANS_streaming_decoder_output"></p>
 
+  <h3> Optimality of Streaming-rANS </h3>
+  <p> Restricting the state to the range <dt-math> \mathcal{I} </dt-math> no longer guarantees that the average codelength will be equal to the entropy. The Optimality analysis also becomes tricky as we need to consider the size of the <dt-math> BitStream </dt-math>, which also depends on the order in which the symbols appear in the input sequence. However, it can still be shown that as the range parameter <dt-math> l </dt-math> increases, the performance of the Streaming-rANS asymptotically approaches Entropy. This was shown in the interesting work by Yokoo in [cite], which uses a clever way of approximating the state distribution  <dt-math> \mathcal{I} </dt-math>. 
+  </p>
+
+  <p>
+  A theoretical result which shows the rate of convergence towards entropy as we increase <dt-math> l </dt-math> is still open. However, Jarek Duda, again in his work [cite], gave the following relation for the performance of Streaming-rANS for a given range parameter <dt-math> l </dt-math>:
+  <dt-math block>  
+  L_{avg} = H + \mathcal{O}(1/{l^2})
+  </dt-math>
+  He provides experimental evidence and some arguments for the relationship, but theoretically sound arguments are still elusive.
+  </p>
+
   <h3> Practical Aspects </h3>
   <p>
   Based on the discussion presented, Streaming rANS looks like a very good practical replacement for Arithmetic coding and range coding. However, there are a few more tweaks which can be used to further improve the rANS encoding:
@@ -508,17 +527,16 @@
   \end{aligned}
   </dt-math>
 
-  This makes sure that the streaming works fine
-  <li> <b> Alias method for slot selection: </b> 
-  <li> <b> A different View of Streaming rANS: </b>
-
+  This makes sure that the streaming works fine.
+  <li> <b> SIMD and Parallel Streams: </b> Fabian Giesen in the paper [cite], presents a nice way to utilize the SSE instruction set to parallelize the Streaming-rANS encoding and decoding. Its an interesting work which I am still in the process of completely digesting. Feel free to take a look at the paper if interested! 
+  <li> <b> Caching of Encoder/Decoder computations: </b> Note that based on the newly observed symbol, the encoder maps the current state in the finite range <dt-math> \mathcal{I} = [lM, 2lM-1] </dt-math> to another state in the same range, while at the same time sending out a few bits to the <dt-math> BitStream </dt-math>. Thus, the encoder (as well as the decoder) can be viewed as a special type of Finite-State Automata based Encoder (FSE). Thus, to speed up the encoding/decoding, one can just store the Streaming-rANS computations in a cache table. Here is an example to tryout!
   <h4> Streaming-rANS as a FSE </h4>
    <p>
    Symbol Counts, <dt-math> \mathcal{F} </dt-math> <input type="text" id="symbol_counts_tANS" value="3,3,2"> <br>
    <button onclick="tANS_encoder()">Try it</button> 
    </p>
    <p id="tANS_encoder_output"></p>
-
+   This use of cache encoding and decoding tables can lead to massive speed-ups, as all we are doing is looking for the values in a lookup-table: thus, making the Streaming-rANS encoding/decoding as fast as Huffman coding! Wow! This Cached Streaming-rANS coder infact belongs to a bigger class of ANS coders, known as <b> tANS Coders </b>, which is aptly an abbreviation for tabled-ANS. In the next section we will try to understand the tANS class of coders in more detail.
   </ol>
 
 </dt-article>

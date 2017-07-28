@@ -201,8 +201,8 @@ function tANS_encoder(){
     }
     
 
-    var output_state_string = "<table width=\"60%\"> <tr> <th> Input State </th>"
-    var output_bits_string = "<table width=\"60%\"> <tr> <th> Input State </th>" 
+    var output_state_string = "<table width=\"40%\"> <tr> <th> Input State </th>"
+    var output_bits_string = "<table width=\"40%\"> <tr> <th> Input State </th>" 
 
     for (var s=0; s < symbol_counts.length; s++){
         output_state_string += "<th> " + String.fromCharCode(65+s) + " </th>"  
