@@ -230,7 +230,7 @@
     cumul_counts = np.insert(np.cumsum(symbol_counts),0,0) #the cumulative frequencies
 
     s_count = symbol_counts[s] #current symbol count/frequency
-    next_state = (state/s_count)*total_counts + cumul_sum[s] + (state % s_count) 
+    next_state = (state//s_count)*total_counts + cumul_counts[s] + (state % s_count) 
     return next_state
   </dt-code>
    <h4> rANS Encoding Example</h4>
@@ -268,7 +268,7 @@
 
     slot = state % total_counts #compute the slot     
     s = cumul_inverse(y) #decode the symbol
-    prev_state = (state/total_counts)*symbol_count[s] + slot - cumul_sum[s] #update the state
+    prev_state = (state//total_counts)*symbol_count[s] + slot - cumul_counts[s] #update the state
     return s,prev_state
  </dt-code>
 
